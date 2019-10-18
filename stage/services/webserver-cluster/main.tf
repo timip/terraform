@@ -1,33 +1,24 @@
 provider "aws" {
-  region = "us-east-2"
+  region = "us-west-2"
 }
-
-variable "server_port" {
-  description = "The port the server will use for HTTP requests"
-  type        = number
-  default     = 8080
-}
-
-/*
-output "public_ip" {
-  description = "The public IP address of the web server"
-  value       = aws_instance.example.public_ip
-}
-*/
 
 resource "aws_launch_configuration" "example" {
-  image_id        = "ami-0c55b159cbfafe1f0"
+  image_id        = "ami-06d51e91cea0dac8d"
   instance_type   = "t2.micro"
   security_groups = [aws_security_group.instance.id]
-
-  user_data = <<-EOF
-              #!/bin/bash
-              echo "Hello, World" > index.html
-              nohup busybox httpd -f -p ${var.server_port} &
-              EOF
+  user_data       = data.template_file.user_data.rendered
 
   lifecycle {
     create_before_destroy = true
+  }
+}
+
+data "template_file" "user_data" {
+  template = file("user-data.sh")
+  vars = {
+    server_port = var.server_port
+    db_address  = data.terraform_remote_state.db.outputs.address
+    db_port     = data.terraform_remote_state.db.outputs.port
   }
 }
 
@@ -138,7 +129,23 @@ resource "aws_lb_listener_rule" "asg" {
   }
 }
 
-output "alb_dns_name" {
-  value       = aws_lb.example.dns_name
-  description = "The domain name of the load balancer"
+terraform {
+  backend "s3" {
+    bucket         = "org.timip.terraform-state"
+    key            = "stage/services/webserver-cluster/terraform.tfstate"
+    region         = "us-west-2"
+    dynamodb_table = "terraform-up-and-running-locks"
+    encrypt        = true
+  }
 }
+
+data "terraform_remote_state" "db" {
+  backend = "s3"
+  config = {
+    bucket = "org.timip.terraform-state"
+    key    = "stage/data-stores/mysql/terraform.tfstate"
+    region = "us-west-2"
+  }
+}
+
+
