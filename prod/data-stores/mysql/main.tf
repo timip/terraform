@@ -23,7 +23,7 @@ data "aws_secretsmanager_secret_version" "db_password" {
 terraform {
   backend "s3" {
     bucket         = "org.timip.terraform-state"
-    key            = "stage/data-stores/mysql/terraform.tfstate"
+    key            = "prod/data-stores/mysql/terraform.tfstate"
     region         = "us-west-2"
     dynamodb_table = "terraform-up-and-running-locks"
     encrypt        = true
