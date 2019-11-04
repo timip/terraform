@@ -27,12 +27,21 @@ resource "aws_autoscaling_group" "example" {
 
   min_size = var.min_size
   max_size = var.max_size
+
   tag {
     key                 = "Name"
     value               = var.cluster_name
     propagate_at_launch = true
   }
 
+  dynamic "tag" {
+    for_each = var.custom_tags
+    content {
+      key = tag.key
+      value = tag.value
+      propagrate_at_launch = true
+    }
+  }
 }
 
 resource "aws_security_group" "instance" {
